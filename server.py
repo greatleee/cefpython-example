@@ -1,31 +1,69 @@
 import sys
 import platform
 import base64
+import ctypes
+import threading
+from time import sleep
 
 from cefpython3 import cefpython as cef
+
 
 def main():
     check_version()
     sys.excepthook = cef.ExceptHook
-    cef.Initialize()
-    html = ''
-    with open('web/index.html', 'r+') as src:
-        html = src.read()
-    cef.CreateBrowserSync(url=html_to_data_uri(html), window_title='Hello World!')
+    app_settings = {
+    }
+    cef.Initialize(settings=app_settings)
+
+    browser_settings = {
+    }
+    browser = cef.CreateBrowserSync(url='file:///web/index.html',
+                                    settings=browser_settings,
+                                    window_title='Hello World!')
+    if platform.system() == "Windows":
+        window_handle = browser.GetOuterWindowHandle()
+        insert_after_handle = 0
+        # X and Y parameters are ignored by setting the SWP_NOMOVE flag
+        SWP_NOMOVE = 0x0002
+        # noinspection PyUnresolvedReferences
+        ctypes.windll.user32.SetWindowPos(window_handle, insert_after_handle,
+                                          0, 0, 700, 200, SWP_NOMOVE)
+    set_javascript_bindings(browser)
     cef.MessageLoop()
     cef.Shutdown()
-    
+
 
 def check_version():
     assert cef.__version__ >= '57.0', 'CEF Python v57.0+ required to run this'
 
 
-def html_to_data_uri(html):
-    html = html.encode('utf-8', 'replace')
-    b64 = base64.b64encode(html).decode('utf-8', 'replace')
-    ret = 'data:text/html;base64,{data}'.format(data=b64)
-    return ret
+class External():
+    target_dir_path = ''
+    def __init__(self, browser):
+        self.browser = browser
+
+    def ask_dir_path(self):
+        from tkinter.filedialog import askdirectory
+        from tkinter import Tk 
+        Tk().withdraw()
+        self.target_dir_path = askdirectory()
+        self.browser.ExecuteFunction('updatePath', self.target_dir_path)
+
+    def confirm(self):
+        show_confirm(self.browser, self.target_dir_path)
+
+def show_confirm(browser, path):
+    print('success: ' + path)
+
+def set_javascript_bindings(browser):
+    external = External(browser)
+    bindings = cef.JavascriptBindings(
+            bindToFrames=False, bindToPopups=False)
+    bindings.SetObject('external', external)
+    browser.SetJavascriptBindings(bindings)
 
 
 if __name__ == "__main__":
+    # threading.Thread(target=a).start()
+
     main()
