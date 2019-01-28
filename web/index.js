@@ -8,7 +8,6 @@ function updatePath(targetDirPath) {
     document.getElementById("finder").disabled = false;
 }
 
-function confirm(){
-    external.confirm()
+function confirm() {
+    py_confirm(document.getElementById("target-path").textContent)
 }
-

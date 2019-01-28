@@ -3,13 +3,11 @@ import platform
 import base64
 import ctypes
 import threading
-from time import sleep
 
 from cefpython3 import cefpython as cef
 
 
 def main():
-    check_version()
     sys.excepthook = cef.ExceptHook
     app_settings = {
     }
@@ -33,10 +31,6 @@ def main():
     cef.Shutdown()
 
 
-def check_version():
-    assert cef.__version__ >= '57.0', 'CEF Python v57.0+ required to run this'
-
-
 class External():
     target_dir_path = ''
     def __init__(self, browser):
@@ -49,21 +43,19 @@ class External():
         self.target_dir_path = askdirectory()
         self.browser.ExecuteFunction('updatePath', self.target_dir_path)
 
-    def confirm(self):
-        show_confirm(self.browser, self.target_dir_path)
 
-def show_confirm(browser, path):
+def py_confirm(path):
     print('success: ' + path)
+
 
 def set_javascript_bindings(browser):
     external = External(browser)
     bindings = cef.JavascriptBindings(
             bindToFrames=False, bindToPopups=False)
+    bindings.SetFunction('py_confirm', py_confirm)
     bindings.SetObject('external', external)
     browser.SetJavascriptBindings(bindings)
 
 
 if __name__ == "__main__":
-    # threading.Thread(target=a).start()
-
     main()
